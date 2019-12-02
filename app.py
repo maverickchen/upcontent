@@ -15,7 +15,7 @@ app = Flask(__name__)
 def decode_auth_token(auth_token):
     # use jwt, jwt_secret_key
     # should be a one liner, but we want you to see how JWTs work
-    pass
+    return jwt.decode(auth_token, jwt_secret_key)
 
 
 def encode_auth_token(user_id, name, email, scopes):
@@ -30,6 +30,7 @@ def encode_auth_token(user_id, name, email, scopes):
         'scope': scopes,
         'exp': mktime((datetime.datetime.now() + datetime.timedelta(days=1)).timetuple())
     }
+    return jwt.encode(payload, jwt_secret_key).decode("utf-8")
 
 
 def get_user_from_token():
@@ -37,7 +38,8 @@ def get_user_from_token():
     # should pull token from the Authorization header
     # Authorization: Bearer {token}
     # Where {token} is the token created by the login route
-    pass
+    token = request.headers.get('Authorization').split('Bearer ')[1]
+    return decode_auth_token(token)
 
 
 @app.route('/')
@@ -48,10 +50,11 @@ def status():
 @app.route('/user', methods=['GET'])
 def user():
     # get the user data from the auth/header/jwt
+    user_data = get_user_from_token()
     return {
-        'user_id': '',
-        'name': '',
-        'email': ''
+        'user_id': user_data['sub'],
+        'name': user_data['name'],
+        'email': user_data['email']
     }
 
 
@@ -61,9 +64,17 @@ def login():
     # use the get_user_by_email function to get the user data
     # return a the encoded json web token as a token property on the json response as in the format below
     # we're not actually validitating a password or anything because that would add unneeded complexity
-    return {
-        'token': ''
-    }
+    email = request.args.get('email')
+    scopes = request.args.get('scopes')
+    if email and scopes:
+        user = get_user_by_email(email)
+        return {
+            'token': encode_auth_token(user['id'], user['name'], email, scopes)
+        }
+    else:
+        return {
+            'error': 'No "email" or "scopes" query params provided'
+        }
 
 
 @app.route('/widgets', methods=['GET'])
