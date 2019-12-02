@@ -76,6 +76,19 @@ def login():
             'error': 'No "email" or "scopes" query params provided'
         }
 
+def satisfies(widget, filters):
+    for (field, val) in filters.items():
+        if widget[field] != val:
+            return False
+    return True
+
+
+def labelify(s):
+    # turn hyphens to spaces and capitalize words of a string s
+    words = s.replace('-', ' ').split()
+    capitalized = [word.capitalize() for word in words]
+    return ' '.join(capitalized)
+    
 
 @app.route('/widgets', methods=['GET'])
 def widgets():
@@ -99,17 +112,34 @@ def widgets():
 
     # filter the results by the query parameters
     # return the data in the format below
+    user_data = get_user_from_token()
+    if 'widgets' not in user_data['scope']:
+        return {
+            'error': 'User is not authorized to GET widgets'
+        }
 
+    filters = request.args
+    url_path = 'https://us-central1-interview-d93bf.cloudfunctions.net/widgets'
+    resp = requests.get(
+        url=url_path,
+        headers={
+            'Authorization': f'apiKey {api_auth_token}'
+        },
+        params={
+            'user_id': user_data['sub']
+        }
+    )
+    widgets = resp.json()
+    matches = [widg for widg in widgets if satisfies(widg, filters)]
+    for match in matches:
+        print(match)
+        match.update({
+            'type_label': labelify(match['type']),
+            'created': parse_date_time(match['created']),
+        })
     return {
-        'total_widgets_own_by_user': 2,
-        'matching_items': [
-            {
-                "id": 0,
-                "type": "foo-bar",
-                "type_label": "Foo Bar",  # replace dashes with spaces and capitalize words
-                "created": datetime.datetime.now().isoformat(), # remember to replace
-            }
-        ]
+        'total_widgets_own_by_user': len(widgets),
+        'matching_items': matches
     }
 
 
