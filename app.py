@@ -132,7 +132,6 @@ def widgets():
     widgets = resp.json()
     matches = [widg for widg in widgets if satisfies(widg, filters)]
     for match in matches:
-        print(match)
         match.update({
             'type_label': labelify(match['type']),
             'created': parse_date_time(match['created']),
