@@ -77,8 +77,16 @@ def login():
         }
 
 def satisfies(widget, filters):
-    for (field, val) in filters.items():
-        if widget[field] != val:
+    if 'type' in filters:
+        if widget['type'] != filters['type']: 
+            return False
+    
+    if 'created_start' in filters:
+        if parse_date_time(filters['created_start']) > parse_date_time(widget['created']):
+            return False
+
+    if 'created_end' in filters:
+        if parse_date_time(filters['created_end']) < parse_date_time(widget['created']):
             return False
     return True
 
@@ -134,7 +142,6 @@ def widgets():
     for match in matches:
         match.update({
             'type_label': labelify(match['type']),
-            'created': parse_date_time(match['created']),
         })
     return {
         'total_widgets_own_by_user': len(widgets),
